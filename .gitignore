@@ -41,3 +41,17 @@ build/
 Thumbs.db
 .vscode/
 .idea/
+
+tools/
+*.pbs
+*.sh
+*.py
+*.ipynb
+*.md
+*.txt
+*.csv
+*.h5
+*.pkl
+*.pth
+*.pt
+*.pth.tar

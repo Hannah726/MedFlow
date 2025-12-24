@@ -1,0 +1,58 @@
+experiment:
+  name: "ehr_flow_12h_uncond_large"
+  seed: 0
+  device: "cuda"
+  
+data:
+  data_dir: "/home/users/nus/e1582377/MedFlow/data"
+  window_hours: 12
+  max_len: 243
+  batch_size: 16              # 减小 batch size（模型更大）
+  num_workers: 4
+  pin_memory: true
+  
+  splits:
+    train: "train"
+    val: "valid"
+    test: "test"
+
+model:
+  vocab_size_input: 2385
+  vocab_size_type: 7
+  vocab_size_dpe: 15
+  d_model: 256                # 128 → 256 (2x)
+  d_time: 32                  # 16 → 32 (2x)
+  n_layers: 12                # 6 → 12 (2x)
+  n_heads: 8
+  dropout: 0.1
+  use_flash: false
+  fusion_method: "sum"
+  
+  use_conditions: false
+
+training:
+  num_epochs: 100
+  lr: 5e-5                  
+  weight_decay: 0.01
+  grad_clip: 1.0
+  warmup_steps: 2000
+  
+  save_every: 10
+  eval_every: 5
+  log_every: 100
+
+generation:
+  num_steps: 50
+  solver: "euler"
+  batch_size: 64
+  num_samples: 10000
+
+paths:
+  checkpoint_dir: "./checkpoints/uncond_12h_large"
+  output_dir: "./outputs/uncond_12h_large"
+  log_dir: "./logs/uncond_12h_large"
+  
+logging:
+  use_wandb: false
+  wandb_project: "ehr-flow-matching"
+  wandb_entity: null

@@ -1,0 +1,63 @@
+experiment:
+  name: "ehr_flow_12h_cond"
+  seed: 0
+  device: "cuda"
+  
+data:
+  data_dir: "/home/users/nus/e1582377/MedFlow/data"
+  window_hours: 12
+  max_len: 243
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  
+  splits:
+    train: "train"
+    val: "valid"
+    test: "test"
+
+model:
+  vocab_size_input: 2385
+  vocab_size_type: 7
+  vocab_size_dpe: 15
+  d_model: 128
+  d_time: 16
+  n_layers: 6
+  n_heads: 8
+  dropout: 0.1
+  use_flash: false
+  fusion_method: "sum"
+  
+  use_conditions: true
+  num_diag_codes: 1000
+  d_cond: 32
+
+training:
+  num_epochs: 100
+  lr: 1e-4
+  weight_decay: 0.01
+  grad_clip: 1.0
+  warmup_steps: 1000
+  
+  save_every: 10
+  eval_every: 5
+  log_every: 100
+  
+  classifier_free_dropout: 0.1
+
+generation:
+  num_steps: 50
+  solver: "euler"
+  batch_size: 64
+  guidance_scale: 2.0
+  num_samples: 10000
+
+paths:
+  checkpoint_dir: "./checkpoints/cond_12h"
+  output_dir: "./outputs/cond_12h"
+  log_dir: "./logs/cond_12h"
+  
+logging:
+  use_wandb: false
+  wandb_project: "ehr-flow-matching"
+  wandb_entity: null
