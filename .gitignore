@@ -5,7 +5,6 @@ data/processed_6/
 data/processed_12/
 data/processed_24/
 
-
 /*.npy
 /*.dat
 /*.h5
@@ -43,12 +42,6 @@ Thumbs.db
 .idea/
 
 tools/
-*.pbs
-*.sh
-*.py
-*.ipynb
-*.md
-*.txt
 *.csv
 *.h5
 *.pkl
