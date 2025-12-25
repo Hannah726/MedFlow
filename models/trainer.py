@@ -41,7 +41,7 @@ class Trainer:
             min_lr = 1e-6  # 默认最小学习率
         self.scheduler = CosineAnnealingLR(
             self.optimizer,
-            T_max=total_steps,
+            T_max=int(total_steps * 0.8),
             eta_min=min_lr
         )
         
@@ -71,10 +71,17 @@ class Trainer:
         mask: torch.Tensor
     ) -> torch.Tensor:
         mse = (v_pred - v_target) ** 2
-        mse = mse.sum(dim=-1)
+        mse_per_event = mse.mean(dim=-1)
         
-        masked_mse = mse * mask.float()
-        loss = masked_mse.sum() / mask.sum().clamp(min=1)
+        # Mask and average over valid events
+        masked_mse = mse_per_event * mask.float()
+
+        # Average per sequence
+        B = mask.shape[0]
+        loss_per_seq = masked_mse.sum(dim=1) / mask.sum(dim=1).clamp(min=1)  # (B,)
+        
+        # Average over batch
+        loss = loss_per_seq.mean()
         
         return loss
     
@@ -109,7 +116,17 @@ class Trainer:
         v_pred = self.model(z_s, s, batch['mask'], conditions)
         
         loss = self.flow_matching_loss(v_pred, v_target, batch['mask'])
-        
+
+        # print for checking
+        if self.global_step % 1000 == 0:
+            avg_len = batch['mask'].sum().item() / B
+            raw_mse = (v_pred - v_target).pow(2).mean().item()
+            print(f"\n[TRAIN DEBUG @ step {self.global_step}]")
+            print(f"  Batch size: {B}")
+            print(f"  Avg seq len: {avg_len:.1f}")
+            print(f"  Raw MSE: {raw_mse:.6f}")
+            print(f"  Loss: {loss.item():.6f}")
+            
         self.optimizer.zero_grad()
         loss.backward()
         
@@ -160,21 +177,27 @@ class Trainer:
             
             total_loss += loss.item() * B
             total_samples += B
+
+        print(f"\n[VAL DEBUG]")
+        print(f"  Avg seq len: {np.mean(all_lens):.1f}")
+        print(f"  Avg loss per batch: {np.mean(all_losses):.6f}")
+        print(f"  Final weighted loss: {total_loss / total_samples:.6f}")
         
         avg_loss = total_loss / total_samples
         return avg_loss
     
     def train_epoch(self):
         """Train for one epoch"""
-        epoch_loss = 0
-        num_batches = 0
+        total_loss = 0
+        total_samples = 0
         
         pbar = tqdm(self.train_loader, desc=f'Epoch {self.epoch + 1}/{self.config.training.num_epochs}')
         
         for batch in pbar:
             loss = self.train_step(batch)
-            epoch_loss += loss
-            num_batches += 1
+            B = batch['mask'].shape[0]  # batch size
+            total_loss += loss * B
+            total_samples += B
             
             if self.global_step % self.config.training.log_every == 0:
                 pbar.set_postfix({
@@ -182,7 +205,7 @@ class Trainer:
                     'lr': f'{self.scheduler.get_last_lr()[0]:.2e}'
                 })
         
-        avg_loss = epoch_loss / num_batches
+        avg_loss = total_loss / total_samples
         return avg_loss
     
     def train(self):
